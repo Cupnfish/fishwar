@@ -33,32 +33,18 @@ fn button_system(
         match *interaction {
             Interaction::Clicked => {
                 let tween = Tween::new(
-                    // Use a quadratic easing on both endpoints.
                     EaseFunction::BackInOut,
-                    // Loop animation back and forth.
                     TweeningType::Once,
-                    // Animation time (one way only; for ping-pong it takes 2 seconds
-                    // to come back to start).
                     Duration::from_secs_f32(0.2),
-                    // The lens gives the Animator access to the Transform component,
-                    // to animate it. It also contains the start and end values associated
-                    // with the animation ratios 0. and 1.
                     TransformScaleLens {
                         start: Vec3::new(0.8, 0.8, 0.),
                         end: Vec3::new(0.5, 0.5, 0.),
                     },
                 );
                 let color = Tween::new(
-                    // Use a quadratic easing on both endpoints.
                     EaseFunction::SineIn,
-                    // Loop animation back and forth.
                     TweeningType::Once,
-                    // Animation time (one way only; for ping-pong it takes 2 seconds
-                    // to come back to start).
                     Duration::from_secs_f32(0.2),
-                    // The lens gives the Animator access to the Transform component,
-                    // to animate it. It also contains the start and end values associated
-                    // with the animation ratios 0. and 1.
                     UiColorColorLens {
                         start: HOVERED_BUTTON,
                         end: PRESSED_BUTTON,
@@ -71,32 +57,18 @@ fn button_system(
             }
             Interaction::Hovered => {
                 let tween = Tween::new(
-                    // Use a quadratic easing on both endpoints.
                     EaseFunction::BackInOut,
-                    // Loop animation back and forth.
                     TweeningType::Once,
-                    // Animation time (one way only; for ping-pong it takes 2 seconds
-                    // to come back to start).
                     Duration::from_secs_f32(0.4),
-                    // The lens gives the Animator access to the Transform component,
-                    // to animate it. It also contains the start and end values associated
-                    // with the animation ratios 0. and 1.
                     TransformScaleLens {
                         start: Vec3::new(1., 1., 0.),
                         end: Vec3::new(0.8, 0.8, 0.),
                     },
                 );
                 let color = Tween::new(
-                    // Use a quadratic easing on both endpoints.
                     EaseMethod::Linear,
-                    // Loop animation back and forth.
                     TweeningType::Once,
-                    // Animation time (one way only; for ping-pong it takes 2 seconds
-                    // to come back to start).
                     Duration::from_secs_f32(0.4),
-                    // The lens gives the Animator access to the Transform component,
-                    // to animate it. It also contains the start and end values associated
-                    // with the animation ratios 0. and 1.
                     UiColorColorLens {
                         start: NORMAL_BUTTON,
                         end: HOVERED_BUTTON,
@@ -110,32 +82,18 @@ fn button_system(
             Interaction::None => {
                 commands.entity(button).remove::<Animator<Transform>>();
                 let tween = Tween::new(
-                    // Use a quadratic easing on both endpoints.
                     EaseMethod::Linear,
-                    // Loop animation back and forth.
                     TweeningType::Once,
-                    // Animation time (one way only; for ping-pong it takes 2 seconds
-                    // to come back to start).
                     Duration::from_secs_f32(0.3),
-                    // The lens gives the Animator access to the Transform component,
-                    // to animate it. It also contains the start and end values associated
-                    // with the animation ratios 0. and 1.
                     TransformScaleLens {
                         start: Vec3::new(0.8, 0.8, 0.),
                         end: Vec3::new(1., 1., 0.),
                     },
                 );
                 let color = Tween::new(
-                    // Use a quadratic easing on both endpoints.
                     EaseMethod::Linear,
-                    // Loop animation back and forth.
                     TweeningType::Once,
-                    // Animation time (one way only; for ping-pong it takes 2 seconds
-                    // to come back to start).
                     Duration::from_secs_f32(0.3),
-                    // The lens gives the Animator access to the Transform component,
-                    // to animate it. It also contains the start and end values associated
-                    // with the animation ratios 0. and 1.
                     UiColorColorLens {
                         start: HOVERED_BUTTON,
                         end: NORMAL_BUTTON,
@@ -160,7 +118,6 @@ pub struct UiColorColorLens {
 
 impl Lens<UiColor> for UiColorColorLens {
     fn lerp(&mut self, target: &mut UiColor, ratio: f32) {
-        // Note: Add<f32> for Color affects alpha, but not Mul<f32>. So use Vec4 for consistency.
         let start: Vec4 = self.start.into();
         let end: Vec4 = self.end.into();
 
@@ -177,11 +134,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .spawn_bundle(ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(150.0), Val::Px(65.0)),
-                // center button
                 margin: Rect::all(Val::Auto),
-                // horizontally center child text
                 justify_content: JustifyContent::Center,
-                // vertically center child text
                 align_items: AlignItems::Center,
                 ..Default::default()
             },
