@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use bevy::{prelude::App, DefaultPlugins};
 use bevy_tweening::TweeningPlugin;
 use start_page::StartPagePlugin;
