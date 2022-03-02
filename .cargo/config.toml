@@ -1,0 +1,5 @@
+[alias]
+fmt-check = "fmt --all -- --check"
+lint = "clippy --workspace --all-targets  -- -D warnings -A clippy::type_complexity"
+# 版本与 shaders-builder 文件夹内 rust-toolchain.toml 同步
+shader = "+nightly-2022-01-13 run -p shaders-builder"
