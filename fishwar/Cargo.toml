@@ -1,0 +1,19 @@
+[package]
+name = "fishwar"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+bevy = "0.6.1"
+bevy_tweening = "0.3.2"
+heron = { version = "2.0.1", features = [ "3d" ] }
+bevy-inspector-egui = { version = "0.8.2", optional = true }
+bevy_framepace = { version = "0.3", optional = true }
+codec = { package = "parity-scale-codec", version = "2.3.0", default-features = false, features = [ "derive", "max-encoded-len" ] }
+anyhow = "1"
+
+
+[features]
+default = [ "dev" ]
+dev = [ "bevy-inspector-egui", "bevy_framepace" ]
