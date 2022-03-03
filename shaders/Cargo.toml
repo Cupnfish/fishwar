@@ -11,3 +11,8 @@ crate-type = [ "lib", "dylib" ]
 spirv-std = { git = "https://github.com/EmbarkStudios/rust-gpu.git", features = [ "glam" ] }
 spirv-std-macros = { git = "https://github.com/EmbarkStudios/rust-gpu.git" }
 bytemuck = { version = "1.7.3", features = [ "derive" ] }
+
+
+[target.'cfg(not(target_arch = "spirv"))'.dependencies]
+bevy_crevice = "0.6.1"
+bevy_ecs = "0.6.1"

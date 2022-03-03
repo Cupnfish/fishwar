@@ -3,5 +3,5 @@
 ## 如何编译着色器？
 
 ```shell
-cargo shader
+cargo +nightly-2022-01-13 run -r -p shaders-builder
 ```

@@ -12,7 +12,8 @@ bevy-inspector-egui = { version = "0.8.2", optional = true }
 bevy_framepace = { version = "0.3", optional = true }
 codec = { package = "parity-scale-codec", version = "2.3.0", default-features = false, features = [ "derive", "max-encoded-len" ] }
 anyhow = "1"
-
+bytemuck = "1.7.3"
+shaders = { path = "../shaders" }
 
 [features]
 default = [ "dev" ]

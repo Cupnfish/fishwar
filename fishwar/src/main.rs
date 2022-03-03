@@ -6,6 +6,7 @@ use start_page::StartPagePlugin;
 mod game_state;
 mod start_page;
 mod utils;
+mod waves;
 
 fn main() {
     let mut app = App::new();

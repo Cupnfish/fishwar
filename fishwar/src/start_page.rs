@@ -1,25 +1,14 @@
 use std::time::Duration;
 
 use bevy::{
-    ecs::system::{lifetimeless::SRes, SystemParamItem},
+    core::Time,
     math::{Rect, Size, Vec3, Vec4},
-    pbr::{Material, MaterialMeshBundle, MaterialPipeline, MaterialPlugin},
     prelude::{
-        shape, App, AssetServer, Assets, BuildChildren, Button, ButtonBundle, Changed, Color,
-        Commands, Component, Entity, Handle, Mesh, PerspectiveCameraBundle, Plugin, Query, Res,
-        ResMut, Shader, State, SystemSet, TextBundle, Transform, UiCameraBundle, With,
+        shape, warn, App, AssetServer, Assets, BuildChildren, Button, ButtonBundle, Changed, Color,
+        Commands, Component, Entity, Handle, Mesh, OrthographicCameraBundle, Plugin, Query, Res,
+        ResMut, State, SystemSet, TextBundle, Transform, UiCameraBundle, With,
     },
-    reflect::TypeUuid,
-    render::{
-        render_asset::{PrepareAssetError, RenderAsset, RenderAssetPlugin},
-        render_resource::{
-            std140::{AsStd140, Std140},
-            BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout,
-            BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType, Buffer,
-            BufferBindingType, BufferInitDescriptor, BufferSize, BufferUsages, ShaderStages,
-        },
-        renderer::RenderDevice,
-    },
+    sprite::MaterialMesh2dBundle,
     text::{Text, TextStyle},
     ui::{AlignItems, Interaction, JustifyContent, Style, UiColor, Val},
 };
@@ -28,15 +17,13 @@ use bevy_tweening::{
     Tween, TweeningType,
 };
 
-use crate::game_state::FishWarState;
-use crate::utils::despawn_screen;
+use crate::{game_state::FishWarState, waves::WavesMaterial};
+use crate::{utils::despawn_screen, waves::WavesPlugin};
 pub struct StartPagePlugin;
 
 impl Plugin for StartPagePlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(MaterialPlugin::<WavesMaterial>::default())
-            .add_plugin(RenderAssetPlugin::<WavesMaterial>::default());
-
+        app.add_plugin(WavesPlugin);
         app.add_system_set(SystemSet::on_enter(FishWarState::Menu).with_system(setup))
             .add_system_set(
                 SystemSet::on_update(FishWarState::Menu)
@@ -65,6 +52,9 @@ fn button_system(
         (Changed<Interaction>, With<Button>),
     >,
     mut game_state: ResMut<State<FishWarState>>,
+    query_handle: Query<&Handle<WavesMaterial>>,
+    mut materials: ResMut<Assets<WavesMaterial>>,
+    time: Res<Time>,
 ) {
     for (button, interaction, transform_tween, color_tween) in interaction_query.iter_mut() {
         match *interaction {
@@ -133,6 +123,15 @@ fn button_system(
                         );
                         tween.set_tweenable(new_tween);
                     }
+                }
+                if let Some(progress) = materials.get_mut(query_handle.single()) {
+                    if progress.0.offset >= 1.0 {
+                        if let Err(e) = game_state.set(FishWarState::Game) {
+                            warn!("set state error: {:?}", e);
+                        };
+                    }
+                    let a = time.delta_seconds();
+                    progress.0.offset += a / 1000.0;
                 }
             }
             Interaction::Hovered => {
@@ -254,115 +253,17 @@ fn setup(
             });
         });
 
-    commands.spawn().insert_bundle(MaterialMeshBundle {
-        mesh: meshes.add(Mesh::from(shape::Quad::default())),
-        transform: Transform::from_xyz(0.0, 0.5, 0.0),
+    commands.spawn().insert_bundle(MaterialMesh2dBundle {
+        mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
+        transform: Transform {
+            translation: Vec3::new(-200., 0., 0.),
+            rotation: Default::default(),
+            scale: Vec3::splat(128.),
+        },
         material: materials.add(WavesMaterial::default()),
         ..Default::default()
     });
 
     // camera
-    commands.spawn_bundle(PerspectiveCameraBundle {
-        transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..Default::default()
-    });
-}
-
-#[derive(Debug, Copy, Clone, TypeUuid, AsStd140, Component)]
-#[repr(C)]
-#[uuid = "817a079c-3acf-484a-b4b3-a6254c114200"]
-pub struct WavesMaterial {
-    width: f32,
-    height: f32,
-    time: f32,
-    // 振幅（控制波浪顶端和底端的高度）
-    amplitude: f32,
-    // 角速度（控制波浪的周期）
-    angular_velocity: f32,
-    // 频率（控制波浪移动的速度）
-    frequency: f32,
-    // 偏距（设为 0.5 使得波浪垂直居中于屏幕）
-    offset: f32,
-}
-
-impl Default for WavesMaterial {
-    fn default() -> Self {
-        Self {
-            width: 100.0,
-            height: 100.0,
-            time: 20.0,
-            amplitude: 0.05,
-            angular_velocity: 10.0,
-            frequency: 10.0,
-            offset: 0.5,
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct GpuWavesMaterial {
-    _buffer: Buffer,
-    bind_group: BindGroup,
-}
-
-impl RenderAsset for WavesMaterial {
-    type ExtractedAsset = WavesMaterial;
-
-    type PreparedAsset = GpuWavesMaterial;
-
-    type Param = (SRes<RenderDevice>, SRes<MaterialPipeline<Self>>);
-
-    fn extract_asset(&self) -> Self::ExtractedAsset {
-        self.clone()
-    }
-
-    fn prepare_asset(
-        extracted_asset: Self::ExtractedAsset,
-        (render_device, material_pipeline): &mut SystemParamItem<Self::Param>,
-    ) -> Result<Self::PreparedAsset, PrepareAssetError<Self::ExtractedAsset>> {
-        let contents = extracted_asset.as_std140();
-        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-            contents: contents.as_bytes(),
-            label: None,
-            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-        });
-        let bind_group = render_device.create_bind_group(&BindGroupDescriptor {
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: buffer.as_entire_binding(),
-            }],
-            label: None,
-            layout: &material_pipeline.material_layout,
-        });
-
-        Ok(GpuWavesMaterial {
-            _buffer: buffer,
-            bind_group,
-        })
-    }
-}
-impl Material for WavesMaterial {
-    fn bind_group(material: &<Self as RenderAsset>::PreparedAsset) -> &BindGroup {
-        &material.bind_group
-    }
-
-    fn bind_group_layout(render_device: &RenderDevice) -> BindGroupLayout {
-        render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[BindGroupLayoutEntry {
-                binding: 0,
-                visibility: ShaderStages::FRAGMENT,
-                ty: BindingType::Buffer {
-                    ty: BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: BufferSize::new(WavesMaterial::std140_size_static() as u64),
-                },
-                count: None,
-            }],
-            label: None,
-        })
-    }
-
-    fn fragment_shader(asset_server: &AssetServer) -> Option<Handle<Shader>> {
-        Some(asset_server.load("shaders/fragment.spv"))
-    }
+    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 }
