@@ -17,5 +17,5 @@ rand = "0.8.5"
 #shaders = { path = "../shaders" }
 
 [features]
-default = [ "dev" ]
+default = []
 dev = [ "bevy-inspector-egui", "bevy_framepace", "heron/debug-2d" ]
