@@ -1,34 +1,38 @@
 use std::time::Duration;
 
 use bevy::{
-    core::Time,
-    math::{Rect, Size, Vec3, Vec4},
+    math::{Rect, Size, Vec2, Vec3, Vec4},
     prelude::{
-        shape, warn, App, AssetServer, Assets, BuildChildren, Button, ButtonBundle, Changed, Color,
-        Commands, Component, Entity, Handle, Mesh, OrthographicCameraBundle, Plugin, Query, Res,
-        ResMut, State, SystemSet, TextBundle, Transform, UiCameraBundle, With,
+        shape, App, AssetServer, Assets, BuildChildren, Button, ButtonBundle, Changed, Color,
+        Commands, Component, Entity, EventReader, Mesh, OrthographicCameraBundle, Plugin, Query,
+        Res, ResMut, SystemSet, TextBundle, Transform, UiCameraBundle, With,
     },
-    sprite::MaterialMesh2dBundle,
+    sprite::{MaterialMesh2dBundle, Mesh2dHandle},
     text::{Text, TextStyle},
     ui::{AlignItems, Interaction, JustifyContent, Style, UiColor, Val},
+    window::{WindowResized, Windows},
 };
 use bevy_tweening::{
-    component_animator_system, lens::TransformScaleLens, Animator, EaseFunction, EaseMethod, Lens,
-    Tween, TweeningType,
+    component_animator_system, lens::TransformScaleLens, Animator, AssetAnimator, EaseFunction,
+    EaseMethod, Lens, Tween, TweeningType,
 };
 
-use crate::{game_state::FishWarState, waves::WavesMaterial};
-use crate::{utils::despawn_screen, waves::WavesPlugin};
+use crate::utils::despawn_screen;
+use crate::{
+    game_state::FishWarState,
+    waves::{Offset, WavesMaterial, WavesPropertiesLens},
+};
 pub struct StartPagePlugin;
 
 impl Plugin for StartPagePlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(WavesPlugin);
         app.add_system_set(SystemSet::on_enter(FishWarState::Menu).with_system(setup))
             .add_system_set(
                 SystemSet::on_update(FishWarState::Menu)
                     .with_system(button_system)
-                    .with_system(component_animator_system::<UiColor>),
+                    .with_system(component_animator_system::<UiColor>)
+                    .with_system(crate::waves::sync_with_time)
+                    .with_system(sync_with_window_size),
             )
             .add_system_set(
                 SystemSet::on_exit(FishWarState::Menu).with_system(despawn_screen::<StartMenu>),
@@ -51,10 +55,7 @@ fn button_system(
         ),
         (Changed<Interaction>, With<Button>),
     >,
-    mut game_state: ResMut<State<FishWarState>>,
-    query_handle: Query<&Handle<WavesMaterial>>,
-    mut materials: ResMut<Assets<WavesMaterial>>,
-    time: Res<Time>,
+    mut offset: ResMut<Offset>,
 ) {
     for (button, interaction, transform_tween, color_tween) in interaction_query.iter_mut() {
         match *interaction {
@@ -124,17 +125,10 @@ fn button_system(
                         tween.set_tweenable(new_tween);
                     }
                 }
-                if let Some(progress) = materials.get_mut(query_handle.single()) {
-                    if progress.0.offset >= 1.0 {
-                        if let Err(e) = game_state.set(FishWarState::Game) {
-                            warn!("set state error: {:?}", e);
-                        };
-                    }
-                    let a = time.delta_seconds();
-                    progress.0.offset += a / 1000.0;
-                }
+                offset.on();
             }
             Interaction::Hovered => {
+                offset.hoverd_on();
                 let tween = Tween::new(
                     EaseFunction::BackInOut,
                     TweeningType::Once,
@@ -159,6 +153,7 @@ fn button_system(
                     .insert(Animator::new(color));
             }
             Interaction::None => {
+                offset.off();
                 if let Some(mut tween) = transform_tween {
                     let progress = tween.tweenable().map(|tweenable| tweenable.progress());
                     let new_tween = Tween::new(
@@ -215,15 +210,21 @@ impl Lens<UiColor> for UiColorColorLens {
     }
 }
 #[derive(Component)]
-struct StartMenu;
+pub struct StartMenu;
+
+#[derive(Component)]
+pub struct Wave;
 
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<WavesMaterial>>,
+    windows: Res<Windows>,
 ) {
-    commands.spawn_bundle(UiCameraBundle::default());
+    commands
+        .spawn_bundle(UiCameraBundle::default())
+        .insert(StartMenu);
 
     commands
         .spawn_bundle(ButtonBundle {
@@ -252,18 +253,75 @@ fn setup(
                 ..Default::default()
             });
         });
-
-    commands.spawn().insert_bundle(MaterialMesh2dBundle {
-        mesh: meshes.add(Mesh::from(shape::Quad::default())).into(),
-        transform: Transform {
-            translation: Vec3::new(-200., 0., 0.),
-            rotation: Default::default(),
-            scale: Vec3::splat(128.),
+    let lens = WavesPropertiesLens {
+        start: WavesMaterial {
+            amplitude: 0.2,
+            angular_velocity: 0.8,
+            frequency: 3.,
+            color: Color::SEA_GREEN.into(),
+            time: Default::default(),
+            offset: Default::default(),
         },
-        material: materials.add(WavesMaterial::default()),
-        ..Default::default()
-    });
+        end: WavesMaterial {
+            amplitude: 0.15,
+            angular_velocity: 0.8,
+            frequency: 3.5,
+            color: Color::PINK.into(),
+            time: Default::default(),
+            offset: Default::default(),
+        },
+    };
+    let tween = Tween::new(
+        EaseMethod::Linear,
+        TweeningType::PingPong,
+        Duration::from_secs_f32(15.0),
+        lens,
+    );
+
+    let waves = materials.add(WavesMaterial::default());
+    let window = windows.get_primary().unwrap();
+
+    commands
+        .spawn()
+        .insert_bundle(MaterialMesh2dBundle {
+            mesh: meshes
+                .add(new_waves_mesh(window.width(), window.height()))
+                .into(),
+            transform: Transform {
+                translation: Vec3::new(0., 0., 0.),
+                rotation: Default::default(),
+                scale: Vec3::splat(1.),
+            },
+            material: waves.clone(),
+            ..Default::default()
+        })
+        .insert(AssetAnimator::new(waves, tween))
+        .insert(StartMenu)
+        .insert(Wave);
 
     // camera
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands
+        .spawn_bundle(OrthographicCameraBundle::new_2d())
+        .insert(StartMenu);
+}
+
+pub fn sync_with_window_size(
+    mut window_size: EventReader<WindowResized>,
+    handle_query: Query<&Mesh2dHandle, With<Wave>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+) {
+    for window_resized in window_size.iter() {
+        if let Some(mesh) = handle_query
+            .get_single()
+            .ok()
+            .and_then(|handle| meshes.get_mut(&handle.0))
+        {
+            *mesh = new_waves_mesh(window_resized.width, window_resized.height);
+        };
+    }
+}
+
+pub fn new_waves_mesh(width: f32, height: f32) -> Mesh {
+    let size = Vec2::new(width, height);
+    Mesh::from(shape::Quad { size, flip: false })
 }

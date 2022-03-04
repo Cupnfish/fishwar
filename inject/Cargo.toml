@@ -1,5 +1,5 @@
 [package]
-name = "fishwar"
+name = "inject"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,14 +7,15 @@ edition = "2021"
 [dependencies]
 bevy = "0.6.1"
 bevy_tweening = "0.3.2"
-heron = { version = "2.0.1", features = [ "3d" ] }
+heron = { version = "2.0.1", features = [ "2d" ] }
 bevy-inspector-egui = { version = "0.8.2", optional = true }
 bevy_framepace = { version = "0.3", optional = true }
 codec = { package = "parity-scale-codec", version = "2.3.0", default-features = false, features = [ "derive", "max-encoded-len" ] }
 anyhow = "1"
 bytemuck = "1.7.3"
-shaders = { path = "../shaders" }
+rand = "0.8.5"
+#shaders = { path = "../shaders" }
 
 [features]
 default = [ "dev" ]
-dev = [ "bevy-inspector-egui", "bevy_framepace" ]
+dev = [ "bevy-inspector-egui", "bevy_framepace", "heron/debug-2d" ]
