@@ -24,7 +24,7 @@ fn main() {
         .add_plugin(WavesPlugin)
         .add_plugin(GameOverPlugin)
         .add_plugin(heron::prelude::PhysicsPlugin::default())
-        .add_state(game_state::FishWarState::GameOver);
+        .add_state(game_state::FishWarState::Menu);
 
     #[cfg(feature = "dev")]
     app.add_plugin(bevy_inspector_egui::WorldInspectorPlugin::new());
