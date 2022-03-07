@@ -18,9 +18,12 @@ fn compile_shader_multi(
     extensions: &[&str],
     capabilities: &[Capability],
 ) -> Result<(), Box<dyn Error>> {
-    let mut builder = SpirvBuilder::new(root_path.join("../shaders/"), "spirv-unknown-vulkan1.1")
-        .print_metadata(MetadataPrintout::DependencyOnly)
-        .multimodule(true);
+    let mut builder = SpirvBuilder::new(
+        root_path.join("../shaders/"),
+        "spirv-unknown-vulkan1.1spv1.4",
+    )
+    .print_metadata(MetadataPrintout::DependencyOnly)
+    .multimodule(true);
 
     for extension in extensions {
         builder = builder.extension(*extension);
@@ -36,7 +39,7 @@ fn compile_shader_multi(
         let name = handle_name(name);
         std::fs::copy(
             path,
-            root_path.join(&format!("../fishwar/assets/shaders/{}.spv", name)),
+            root_path.join(&format!("../inject/assets/shaders/{}.spv", name)),
         )?;
     }
 

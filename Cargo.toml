@@ -1,4 +1,4 @@
 [workspace]
-members = [ "shaders", "inject", "shaders-builder" ]
+members = [ "shaders", "inject", "shaders-builder", "xtask" ]
 resolver = "2"
 default-members = [ "inject" ]
