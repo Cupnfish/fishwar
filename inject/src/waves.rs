@@ -144,6 +144,7 @@ impl RenderAsset for WavesMaterial {
 
     type Param = (SRes<RenderDevice>, SRes<Material2dPipeline<Self>>);
 
+    #[allow(clippy::clone_on_copy)]
     fn extract_asset(&self) -> Self::ExtractedAsset {
         self.clone()
     }

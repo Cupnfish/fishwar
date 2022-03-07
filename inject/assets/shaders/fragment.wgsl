@@ -13,7 +13,7 @@ struct type_7 {
 
 var<private> global: vec2<f32>;
 var<private> global_1: vec4<f32>;
-[[group(1) ,binding(0)]]
+@group(1) @binding(0) 
 var<uniform> global_2: type_7;
 var<private> global_3: vec4<f32>;
 
@@ -38,8 +38,8 @@ fn function_() {
     return;
 }
 
-[[stage(fragment)]]
-fn fragment([[location(2)]] param: vec2<f32>, [[builtin(position)]] param_1: vec4<f32>) -> [[location(0)]] vec4<f32> {
+@stage(fragment) 
+fn fragment(@location(2) param: vec2<f32>, @builtin(position) param_1: vec4<f32>) -> @location(0) vec4<f32> {
     global = param;
     global_1 = param_1;
     function_();
