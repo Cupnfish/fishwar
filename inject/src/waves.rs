@@ -180,12 +180,7 @@ impl RenderAsset for WavesMaterial {
 
 impl Material2d for WavesMaterial {
     fn fragment_shader(asset_server: &AssetServer) -> Option<Handle<Shader>> {
-        #[cfg(not(any(target_os = "macos", target_arch = "wasm32")))]
-        let fragment = "shaders/fragment.spv";
-        #[cfg(any(target_os = "macos", target_arch = "wasm32"))]
-        let fragment = "shaders/fragment.wgsl";
-
-        Some(asset_server.load(fragment))
+        Some(asset_server.load("shaders/fragment.spv"))
     }
 
     fn bind_group(material: &<Self as RenderAsset>::PreparedAsset) -> &BindGroup {

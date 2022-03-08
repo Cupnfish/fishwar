@@ -10,8 +10,6 @@ xflags::xflags! {
         }
         /// 编译着色器
         cmd shader {
-            /// 可选的是否编译所有类型，默认是所有
-            optional -a,--gen-all
         }
     }
 }
@@ -35,9 +33,7 @@ pub struct Help {
 }
 
 #[derive(Debug)]
-pub struct Shader {
-    pub gen_all: bool,
-}
+pub struct Shader;
 
 impl Xtask {
     pub const HELP: &'static str = Self::HELP_;
