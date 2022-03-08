@@ -23,11 +23,7 @@ pub struct InjectPluge;
 
 impl Plugin for InjectPluge {
     fn build(&self, app: &mut App) {
-        app.init_resource::<CurrentInject>()
-            .init_resource::<MaxInject>()
-            .init_resource::<InitRadius>()
-            .init_resource::<EnoughRadius>()
-            .add_event::<Source>()
+        app.add_event::<Source>()
             .add_system_set(SystemSet::on_enter(FishWarState::Game).with_system(setup))
             .add_system_set(
                 SystemSet::on_update(FishWarState::Game)
@@ -41,7 +37,9 @@ impl Plugin for InjectPluge {
                     .with_system(crate::start_page::sync_with_window_size),
             )
             .add_system_set(
-                SystemSet::on_exit(FishWarState::Game).with_system(despawn_screen::<InjecDespawn>),
+                SystemSet::on_exit(FishWarState::Game)
+                    .with_system(despawn_screen::<InjecDespawn>)
+                    .with_system(remove_resource),
             );
     }
 }
@@ -74,6 +72,11 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<WavesMaterial>>,
 ) {
+    commands.insert_resource(CurrentInject::default());
+    commands.insert_resource(MaxInject::default());
+    commands.insert_resource(InitRadius::default());
+    commands.insert_resource(EnoughRadius::default());
+
     commands
         .spawn_bundle(OrthographicCameraBundle::new_2d())
         .insert(InjectCamera)
@@ -670,3 +673,10 @@ fn space_to_unfair(
 }
 
 struct Source;
+
+fn remove_resource(mut commands: Commands) {
+    commands.remove_resource::<CurrentInject>();
+    commands.remove_resource::<MaxInject>();
+    commands.remove_resource::<InitRadius>();
+    commands.remove_resource::<EnoughRadius>();
+}

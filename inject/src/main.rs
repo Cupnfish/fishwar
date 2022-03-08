@@ -28,8 +28,8 @@ fn main() {
         .add_state(game_state::FishWarState::Menu);
 
     #[cfg(feature = "dev")]
-    app.add_plugin(bevy_inspector_egui::WorldInspectorPlugin::new());
-    //.add_plugin(bevy_framepace::FramepacePlugin::default());
+    app.add_plugin(bevy_inspector_egui::WorldInspectorPlugin::new())
+        .add_plugin(bevy_framepace::FramepacePlugin::default());
 
     app.run()
 }

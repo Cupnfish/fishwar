@@ -1,12 +1,9 @@
 use std::time::Duration;
 
 use bevy::{
+    core::Time,
     math::{Rect, Size, Vec2, Vec3, Vec4},
-    prelude::{
-        shape, App, AssetServer, Assets, BuildChildren, Button, ButtonBundle, Changed, Color,
-        Commands, Component, Entity, EventReader, Mesh, OrthographicCameraBundle, Plugin, Query,
-        Res, ResMut, SystemSet, TextBundle, Transform, UiCameraBundle, With,
-    },
+    prelude::*,
     sprite::{MaterialMesh2dBundle, Mesh2dHandle},
     text::{Text, TextStyle},
     ui::{AlignItems, Interaction, JustifyContent, Style, UiColor, Val},
@@ -20,7 +17,7 @@ use bevy_tweening::{
 use crate::utils::despawn_screen;
 use crate::{
     game_state::FishWarState,
-    waves::{Offset, WavesMaterial, WavesPropertiesLens},
+    waves::{WavesMaterial, WavesPropertiesLens},
 };
 pub struct StartPagePlugin;
 
@@ -31,11 +28,13 @@ impl Plugin for StartPagePlugin {
                 SystemSet::on_update(FishWarState::Menu)
                     .with_system(button_system)
                     .with_system(component_animator_system::<UiColor>)
-                    .with_system(crate::waves::sync_with_time)
+                    .with_system(sync_with_time)
                     .with_system(sync_with_window_size),
             )
             .add_system_set(
-                SystemSet::on_exit(FishWarState::Menu).with_system(despawn_screen::<StartMenu>),
+                SystemSet::on_exit(FishWarState::Menu)
+                    .with_system(despawn_screen::<StartMenu>)
+                    .with_system(remove_resource),
             );
     }
 }
@@ -222,6 +221,8 @@ fn setup(
     mut materials: ResMut<Assets<WavesMaterial>>,
     windows: Res<Windows>,
 ) {
+    commands.insert_resource(Offset::default());
+
     commands
         .spawn_bundle(UiCameraBundle::default())
         .insert(StartMenu);
@@ -324,4 +325,62 @@ pub fn sync_with_window_size(
 pub fn new_waves_mesh(width: f32, height: f32) -> Mesh {
     let size = Vec2::new(width, height);
     Mesh::from(shape::Quad { size, flip: false })
+}
+
+fn sync_with_time(
+    mut materials: ResMut<Assets<WavesMaterial>>,
+    query_waves: Query<&Handle<WavesMaterial>>,
+    time: Res<Time>,
+    offset: Res<Offset>,
+    mut game_state: ResMut<State<FishWarState>>,
+) {
+    for handle in query_waves.iter() {
+        if let Some(waves) = materials.get_mut(handle) {
+            waves.time = time.seconds_since_startup() as f32;
+            if waves.offset <= 0.0 {
+                if let Err(e) = game_state.set(FishWarState::Game) {
+                    warn!("set state error: {:?}", e);
+                };
+            }
+
+            if waves.offset <= 1.0 {
+                waves.offset += offset.0;
+            } else {
+                waves.offset = 1.0;
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Offset(pub f32);
+
+impl Default for Offset {
+    fn default() -> Self {
+        Self(NORMAL_OFFSET)
+    }
+}
+
+const NORMAL_OFFSET: f32 = 0.005;
+
+impl Offset {
+    pub fn off(&mut self) {
+        if self.0.is_sign_negative() {
+            self.0 = NORMAL_OFFSET;
+        }
+    }
+    pub fn on(&mut self) {
+        if self.0.is_sign_positive() {
+            self.0 = -NORMAL_OFFSET * 10.0;
+        }
+    }
+    pub fn hoverd_on(&mut self) {
+        if self.0.is_sign_positive() {
+            self.0 = -NORMAL_OFFSET * 3.0;
+        }
+    }
+}
+
+fn remove_resource(mut commands: Commands) {
+    commands.remove_resource::<Offset>();
 }
